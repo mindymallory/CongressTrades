@@ -1,0 +1,3 @@
+# Keep data folder but ignore database files (backup separately)
+*.db
+*.db-journal

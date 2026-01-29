@@ -6,6 +6,16 @@ Edit these settings to customize your experience.
 
 import os
 from pathlib import Path
+from dotenv import load_dotenv
+
+# Load .env file from project root
+load_dotenv(Path(__file__).parent.parent / ".env")
+
+# =============================================================================
+# FMP API (Financial Modeling Prep)
+# =============================================================================
+# Set via environment variable or .env file
+FMP_API_KEY = os.environ.get("FMP_API_KEY", "")
 
 # =============================================================================
 # NTFY NOTIFICATIONS
@@ -15,7 +25,7 @@ from pathlib import Path
 # 2. Subscribe to a unique topic name (make it hard to guess!)
 # 3. Put that topic name here
 
-NTFY_TOPIC = "congress-trades-CHANGE-ME"  # Change this to your own unique topic!
+NTFY_TOPIC = "congress-trades-mindy-yoyo"  # Your unique topic
 NTFY_SERVER = "https://ntfy.sh"  # Default public server (or self-host)
 
 # Notification settings
@@ -43,13 +53,14 @@ WATCH_MEMBERS = [
 # =============================================================================
 # DATA SETTINGS
 # =============================================================================
-# Where to store the database
-DATA_DIR = Path(os.environ.get("CONGRESS_TRADES_DATA", Path.home() / ".congress_trades"))
+# Database stored in project folder for easy backup
+PROJECT_DIR = Path(__file__).parent.parent
+DATA_DIR = PROJECT_DIR / "data"
 DB_PATH = DATA_DIR / "trades.db"
 
-# API endpoints
-HOUSE_API = "https://house-stock-watcher-data.s3-us-west-2.amazonaws.com/data/all_transactions.json"
-SENATE_API = "https://senate-stock-watcher-data.s3-us-west-2.amazonaws.com/aggregate/all_transactions.json"
+# Data source: Capitol Trades (scraped)
+CAPITOL_TRADES_URL = "https://www.capitoltrades.com/trades"
+TRADES_PER_PAGE = 12
 
 # How far back to fetch on initial load (days)
 INITIAL_LOOKBACK_DAYS = 365 * 5  # 5 years

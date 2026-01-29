@@ -8,7 +8,7 @@ echo Congress Trades - Manual Sync
 echo =============================
 echo.
 
-python main.py sync --notify --days 7
+py main.py sync --notify --days 7 --analyze
 
 echo.
 echo Press any key to close...

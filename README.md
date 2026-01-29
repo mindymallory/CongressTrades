@@ -2,7 +2,7 @@
 
 Track congressional stock trades and get push notifications when politicians buy or sell stocks.
 
-Data sourced from [House Stock Watcher](https://housestockwatcher.com/) and [Senate Stock Watcher](https://senatestockwatcher.com/).
+Data sourced from [Capitol Trades](https://www.capitoltrades.com/).
 
 ## Features
 
@@ -13,6 +13,8 @@ Data sourced from [House Stock Watcher](https://housestockwatcher.com/) and [Sen
 - Filter by transaction type, amount, and watchlist
 - SQLite database (no server needed)
 - Windows Task Scheduler integration
+- **Sharpe ratio analysis** - Calculate risk-adjusted returns for each member
+- **Local dashboard** - Streamlit web UI to visualize trades and rankings
 
 ## Quick Start (Windows)
 
@@ -49,13 +51,13 @@ pip install -r requirements.txt
 This downloads ~5 years of historical trades (takes about 1 minute):
 
 ```cmd
-python main.py init
+py main.py init
 ```
 
 ### 5. Test Notifications
 
 ```cmd
-python main.py test-notify
+py main.py test-notify
 ```
 
 You should receive a test notification on your phone.
@@ -80,32 +82,73 @@ This creates a Windows Task Scheduler task that runs at 7 AM daily.
 
 ### Check for New Trades
 ```cmd
-python main.py sync --notify
+py main.py sync --notify
 ```
 
 ### View Recent Trades
 ```cmd
-python main.py recent --days 7
+py main.py recent --days 7
 ```
 
 ### Search by Ticker
 ```cmd
-python main.py search --ticker NVDA
+py main.py search --ticker NVDA
 ```
 
 ### Search by Member
 ```cmd
-python main.py search --member Pelosi
+py main.py search --member Pelosi
 ```
 
 ### Check Database Status
 ```cmd
-python main.py status
+py main.py status
 ```
 
 ### Manual Sync (Double-Click)
 
 Double-click `scripts/run_once.bat` to manually sync and check for new trades.
+
+## Dashboard
+
+Launch the local web dashboard to visualize trades and Sharpe rankings:
+
+```cmd
+streamlit run dashboard.py
+```
+
+This opens a browser to http://localhost:8501 with three tabs:
+- **Sharpe Rankings** - Bar charts of top traders by risk-adjusted returns
+- **Member Details** - Individual member history and Sharpe ratio over time
+- **Recent Trades** - Filterable table of recent congressional trades
+
+Press `Ctrl+C` in the terminal to stop the dashboard.
+
+## Sharpe Ratio Analysis
+
+Calculate risk-adjusted returns for each Congress member's trading activity:
+
+```cmd
+py main.py analyze
+```
+
+This fetches stock prices (cached locally), calculates 30-day and current returns for each trade, and computes Sharpe ratios. Results are stored in the database for historical tracking.
+
+### View Sharpe Rankings
+```cmd
+py main.py sharpe
+py main.py sharpe --limit 50
+```
+
+### View Member History
+```cmd
+py main.py sharpe --member "Pelosi"
+```
+
+### Run Analysis with Daily Sync
+```cmd
+py main.py sync --notify --analyze
+```
 
 ## Configuration
 
@@ -151,24 +194,25 @@ INCLUDE_DEPENDENT = True
 
 ## Data Location
 
-Your database is stored at:
-- Windows: `C:\Users\YourName\.congress_trades\trades.db`
-
-To change this, set the `CONGRESS_TRADES_DATA` environment variable.
+Your database is stored in the project folder at `data/trades.db`. This makes it easy to back up alongside your code.
 
 ## Commands Reference
 
 | Command | Description |
 |---------|-------------|
-| `python main.py init` | Initialize database with 5 years of data |
-| `python main.py sync --notify` | Check for new trades, send notifications |
-| `python main.py sync --days 30` | Sync trades from last 30 days |
-| `python main.py recent` | Show trades from last 7 days |
-| `python main.py recent --days 30` | Show trades from last 30 days |
-| `python main.py search --ticker AAPL` | Search by ticker symbol |
-| `python main.py search --member Pelosi` | Search by member name |
-| `python main.py status` | Show database statistics |
-| `python main.py test-notify` | Send a test notification |
+| `py main.py init` | Initialize database with 5 years of data |
+| `py main.py sync --notify` | Check for new trades, send notifications |
+| `py main.py sync --notify --analyze` | Sync trades and update Sharpe ratios |
+| `py main.py recent` | Show trades from last 7 days |
+| `py main.py recent --days 30` | Show trades from last 30 days |
+| `py main.py search --ticker AAPL` | Search by ticker symbol |
+| `py main.py search --member Pelosi` | Search by member name |
+| `py main.py status` | Show database statistics |
+| `py main.py test-notify` | Send a test notification |
+| `py main.py analyze` | Run Sharpe ratio analysis |
+| `py main.py sharpe` | Show Sharpe ratio rankings |
+| `py main.py sharpe --member Pelosi` | Show member's Sharpe history |
+| `streamlit run dashboard.py` | Launch local web dashboard |
 
 ## Task Scheduler Commands
 
@@ -195,7 +239,7 @@ schtasks /run /tn "CongressTradesSync"
 ### No notifications received
 1. Check your NTFY_TOPIC in `src/config.py`
 2. Make sure you're subscribed to the same topic in the NTFY app
-3. Run `python main.py test-notify` to verify
+3. Run `py main.py test-notify` to verify
 
 ### Task doesn't run when laptop wakes
 - The task has `StartWhenAvailable` enabled, so it should run when laptop wakes
@@ -203,14 +247,13 @@ schtasks /run /tn "CongressTradesSync"
 - Make sure Python is in your PATH
 
 ### Database errors
-- Delete `~/.congress_trades/trades.db` and run `python main.py init` again
+- Delete `data/trades.db` and run `py main.py init` again
 
 ## Data Sources
 
-- **House**: [House Stock Watcher API](https://house-stock-watcher-data.s3-us-west-2.amazonaws.com/data/all_transactions.json)
-- **Senate**: [Senate Stock Watcher API](https://senate-stock-watcher-data.s3-us-west-2.amazonaws.com/aggregate/all_transactions.json)
+- **Capitol Trades**: https://www.capitoltrades.com/trades
 
-These are maintained by open-source projects that scrape the official government disclosure sites.
+Capitol Trades aggregates data from official government disclosure sites (House and Senate).
 
 ## Legal
 

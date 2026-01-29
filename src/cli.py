@@ -10,6 +10,7 @@ from . import config
 from . import db
 from . import scraper
 from . import notify
+from . import analysis
 
 
 def cmd_sync(args):
@@ -36,6 +37,15 @@ def cmd_sync(args):
     # Send daily digest if configured
     if args.notify and config.DAILY_DIGEST and result["trades"]:
         notify.notify_daily_digest(result["trades"])
+
+    # Run Sharpe analysis if requested
+    if args.analyze:
+        print()
+        print("=" * 50)
+        print("Running Sharpe ratio analysis...")
+        print("=" * 50)
+        analysis.run_analysis(verbose=False)
+        print("Sharpe ratios updated.")
 
     return 0 if result["new_trades"] >= 0 else 1
 
@@ -174,6 +184,58 @@ def cmd_test_notify(args):
         return 1
 
 
+def cmd_analyze(args):
+    """Run Sharpe ratio analysis."""
+    result = analysis.run_analysis(verbose=True)
+    if "error" in result:
+        return 1
+    return 0
+
+
+def cmd_sharpe(args):
+    """Show Sharpe ratio rankings or history."""
+    db.init_db()
+
+    if args.member:
+        # Show history for a specific member
+        history = analysis.get_member_sharpe_history(args.member)
+        if history.empty:
+            print(f"No Sharpe history found for '{args.member}'")
+            return 1
+
+        print(f"Sharpe Ratio History for {args.member}")
+        print("=" * 60)
+        print(f"{'Date':<12} {'30d Sharpe':>12} {'Current':>12} {'Trades':>8} {'Win% 30d':>10}")
+        print("-" * 60)
+        for _, row in history.iterrows():
+            s30 = row['sharpe_30d']
+            sc = row['sharpe_current']
+            s30_str = f"{s30:>12.3f}" if s30 is not None else "         N/A"
+            sc_str = f"{sc:>12.3f}" if sc is not None else "         N/A"
+            wr = row['win_rate_30d']
+            wr_str = f"{wr*100:>9.1f}%" if wr is not None else "       N/A"
+            print(f"{row['snapshot_date']:<12} {s30_str} {sc_str} {row['num_trades']:>8} {wr_str}")
+    else:
+        # Show latest rankings
+        rankings = db.get_latest_sharpe_all_members()
+        if not rankings:
+            print("No Sharpe data found. Run 'python main.py analyze' first.")
+            return 1
+
+        print("Latest Sharpe Ratio Rankings")
+        print("=" * 70)
+        print(f"{'Rank':<5} {'Member':<25} {'Chamber':<8} {'30d Sharpe':>12} {'Win%':>8}")
+        print("-" * 70)
+        for i, row in enumerate(rankings[:args.limit], 1):
+            s30 = row['sharpe_30d']
+            s30_str = f"{s30:>12.3f}" if s30 is not None and abs(s30) < 1000 else "         N/A"
+            wr = row['win_rate_30d']
+            wr_str = f"{wr*100:>7.1f}%" if wr is not None else "     N/A"
+            print(f"{i:<5} {row['member_name'][:24]:<25} {row['chamber']:<8} {s30_str} {wr_str}")
+
+    return 0
+
+
 def main():
     """Main entry point."""
     parser = argparse.ArgumentParser(
@@ -191,6 +253,7 @@ def main():
     sync_parser = subparsers.add_parser("sync", help="Sync new trades from APIs")
     sync_parser.add_argument("--days", type=int, default=7, help="Only fetch trades from last N days (default: 7)")
     sync_parser.add_argument("--notify", action="store_true", help="Send push notifications for new trades")
+    sync_parser.add_argument("--analyze", action="store_true", help="Run Sharpe ratio analysis after sync")
 
     # status command
     subparsers.add_parser("status", help="Show database status")
@@ -209,6 +272,14 @@ def main():
     # test-notify command
     subparsers.add_parser("test-notify", help="Send a test notification")
 
+    # analyze command
+    subparsers.add_parser("analyze", help="Run Sharpe ratio analysis (fetches prices, calculates returns)")
+
+    # sharpe command
+    sharpe_parser = subparsers.add_parser("sharpe", help="Show Sharpe ratio rankings or history")
+    sharpe_parser.add_argument("--member", type=str, help="Show history for a specific member")
+    sharpe_parser.add_argument("--limit", type=int, default=20, help="Number of members to show (default: 20)")
+
     args = parser.parse_args()
 
     if not args.command:
@@ -222,6 +293,8 @@ def main():
         "recent": cmd_recent,
         "search": cmd_search,
         "test-notify": cmd_test_notify,
+        "analyze": cmd_analyze,
+        "sharpe": cmd_sharpe,
     }
 
     return commands[args.command](args)
