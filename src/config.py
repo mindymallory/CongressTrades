@@ -25,7 +25,7 @@ FMP_API_KEY = os.environ.get("FMP_API_KEY", "")
 # 2. Subscribe to a unique topic name (make it hard to guess!)
 # 3. Put that topic name here
 
-NTFY_TOPIC = "congress-trades-mindy-yoyo"  # Your unique topic
+NTFY_TOPIC = os.environ.get("NTFY_TOPIC", "congress-trades-CHANGE-ME")
 NTFY_SERVER = "https://ntfy.sh"  # Default public server (or self-host)
 
 # Notification settings
